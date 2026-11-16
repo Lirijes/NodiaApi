@@ -1,0 +1,76 @@
+# ===============================================================
+# Nodia – lokal utvecklingsmiljö med Docker Compose
+#
+#   docker compose up --build     # starta allt
+#   docker compose down           # stoppa allt
+#
+# Förutsätter mappstrukturen:
+#   Projekt\nodia\NodiaApi   (detta repo)
+#   Projekt\nodia\nodia      (frontendrepot)
+#
+# Databasen ligger i Supabase Cloud – ingen lokal Postgres.
+# Se DOCKER.md för en fullständig förklaring.
+# ===============================================================
+name: nodia
+
+services:
+
+  # -------------------------------------------------------------
+  # Backend: ASP.NET Core (.NET 10) med dotnet watch (hot reload)
+  # -------------------------------------------------------------
+  backend:
+    build:
+      context: .                              # NodiaApi-mappen
+      dockerfile: docker/backend.Dockerfile
+    ports:
+      - "5080:8080"                           # din dator:container
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development      # Swagger + user-secrets aktiveras
+      ASPNETCORE_URLS: http://+:8080           # lyssna på alla nätverkskort, bara HTTP
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"  # krävs för Windows-filer i WSL2
+      DOTNET_WATCH_RESTART_ON_RUDE_EDIT: "true" # starta om automatiskt i stället för att fråga
+      DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER: "true"
+    volumes:
+      # Din källkod -> containern (ändringar syns direkt)
+      - .:/src
+      # Egna volymer för bin/obj så Linux-bygget inte krockar med Visual Studio
+      - backend-bin:/src/bin
+      - backend-obj:/src/obj
+      # NuGet-cache som överlever omstarter
+      - nuget-packages:/root/.nuget/packages
+      # Dina user-secrets (connection string) – read-only, aldrig i Git.
+      # Lång syntax används eftersom Windows-sökvägen innehåller "C:".
+      - type: bind
+        source: ${APPDATA:?APPDATA saknas - kör docker compose från PowerShell eller CMD i Windows}/Microsoft/UserSecrets
+        target: /root/.microsoft/usersecrets
+        read_only: true
+    restart: unless-stopped
+
+  # -------------------------------------------------------------
+  # Frontend: Vite + React med HMR (hot module replacement)
+  # -------------------------------------------------------------
+  frontend:
+    build:
+      context: ../nodia                       # frontendrepot
+      dockerfile: ../NodiaApi/docker/frontend.Dockerfile   # relativt context
+    ports:
+      - "5173:5173"
+    environment:
+      API_PROXY_TARGET: http://backend:8080   # tjänstenamnet = DNS-namn i Docker-nätverket
+      WATCH_POLLING: "true"              # krävs för Windows-filer i WSL2
+    volumes:
+      - ../nodia:/app
+      # Linux-node_modules i egen volym (döljer dina Windows-node_modules)
+      - frontend-node-modules:/app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+# Compose skapar automatiskt nätverket "nodia_default" där
+# backend och frontend kan nå varandra via sina tjänstenamn.
+
+volumes:
+  backend-bin:
+  backend-obj:
+  nuget-packages:
+  frontend-node-modules:

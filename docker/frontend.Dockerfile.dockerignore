@@ -1,0 +1,8 @@
+# Dockerfile-specifik ignore-fil (BuildKit hittar den eftersom den heter
+# <Dockerfile-namn>.dockerignore och ligger bredvid Dockerfilen).
+# Gör att vi slipper lägga en .dockerignore i det Lovable-kopplade repot.
+node_modules/
+dist/
+.git/
+.lovable/
+*.log

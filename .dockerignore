@@ -1,0 +1,9 @@
+# Filer som INTE skickas till Docker när backend-imagen byggs.
+# (Build context = NodiaApi-mappen.)
+bin/
+obj/
+.vs/
+.git/
+*.user
+docker/
+compose.yaml
