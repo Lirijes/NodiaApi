@@ -1,0 +1,50 @@
+# Backend CI – körs vid push och Pull Requests mot main.
+# Bygger API:t; ingen deployment och inga hemligheter behövs
+# (connection string används först när appen körs, inte vid bygge).
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  ci:
+    name: Restore, build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore NodiaApi.slnx
+
+      - name: Build
+        run: dotnet build NodiaApi.slnx --no-restore --configuration Release
+
+      # Det finns ännu inga testprojekt i repot. I stället för ett tomt
+      # `dotnet test` skrivs en synlig notis i körningens sammanfattning.
+      # Byt detta steg mot:
+      #   dotnet test NodiaApi.slnx --no-build --configuration Release
+      # när det första testprojektet läggs till.
+      - name: Test
+        run: echo "::notice title=No tests::NodiaApi has no test projects yet - build only."
