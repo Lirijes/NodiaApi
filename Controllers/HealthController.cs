@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NodiaApi.Data;
 
@@ -23,13 +22,4 @@ public class HealthController(AppDbContext db) : ControllerBase
             return StatusCode(503, new { database = "error", message = ex.Message });
         }
     }
-
-    // GET /api/health/me – requires a Supabase access token (use Authorize in Swagger)
-    [Authorize]
-    [HttpGet("me")]
-    public IActionResult Me() => Ok(new
-    {
-        userId = User.FindFirst("sub")?.Value,
-        email = User.FindFirst("email")?.Value
-    });
 }

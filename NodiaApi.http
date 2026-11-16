@@ -4,3 +4,10 @@ GET {{NodiaApi_HostAddress}}/api/health/db
 Accept: application/json
 
 ###
+
+# Kräver token: ersätt <token> med en Supabase access token
+GET {{NodiaApi_HostAddress}}/api/me
+Authorization: Bearer <token>
+Accept: application/json
+
+###
