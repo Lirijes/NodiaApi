@@ -41,10 +41,8 @@ jobs:
       - name: Build
         run: dotnet build NodiaApi.slnx --no-restore --configuration Release
 
-      # Det finns ännu inga testprojekt i repot. I stället för ett tomt
-      # `dotnet test` skrivs en synlig notis i körningens sammanfattning.
-      # Byt detta steg mot:
-      #   dotnet test NodiaApi.slnx --no-build --configuration Release
-      # när det första testprojektet läggs till.
+      # Restore och Build ovan körs på NodiaApi.slnx, som innehåller både API:t och
+      # tests/NodiaApi.Tests – därför kan testerna köras med --no-build.
+      # Integrationstesterna startar PostgreSQL via Testcontainers (Docker finns på ubuntu-latest).
       - name: Test
-        run: echo "::notice title=No tests::NodiaApi has no test projects yet - build only."
+        run: dotnet test NodiaApi.slnx --no-build --configuration Release --logger "console;verbosity=normal"

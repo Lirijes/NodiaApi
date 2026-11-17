@@ -1,4 +1,7 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using NodiaApi.Data;
@@ -41,10 +44,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RoleClaimType = "role"
         };
     });
-builder.Services.AddAuthorization();
+// --- Authorization: inloggning krävs som STANDARD ---
+// DefaultPolicy gäller [Authorize]; FallbackPolicy gäller endpoints UTAN attribut,
+// så en endpoint som glömmer [Authorize] är ändå skyddad. Öppna endpoints måste
+// uttryckligen märkas med [AllowAnonymous].
+builder.Services.AddAuthorization(options =>
+{
+    var authenticatedUser = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        // "sub" måste vara ett giltigt Supabase-användar-id (uuid) – se User.GetUserId().
+        .RequireAssertion(ctx => Guid.TryParse(ctx.User.FindFirst("sub")?.Value, out _))
+        // Supabase anonyma inloggningar har också aud=authenticated – de släpps inte in.
+        .RequireAssertion(ctx => ctx.User.FindFirst("is_anonymous")?.Value != "true")
+        .Build();
+
+    options.DefaultPolicy = authenticatedUser;
+    options.FallbackPolicy = authenticatedUser;
+});
 
 // --- Controllers + Swagger ---
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    // Enums som JSON-strängar i camelCase, t.ex. CompanyRole.Owner -> "owner".
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(
+        new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
