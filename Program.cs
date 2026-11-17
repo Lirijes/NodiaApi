@@ -8,7 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Database (Supabase Postgres) ---
 // Connection string is stored in user-secrets as ConnectionStrings:Supabase
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Supabase")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("Supabase"),
+        // Explicit schema så att migrationernas RLS/REVOKE träffar rätt tabell.
+        npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 
 // --- Auth (Supabase JWT) ---
 var supabaseUrl = builder.Configuration["Supabase:Url"]
